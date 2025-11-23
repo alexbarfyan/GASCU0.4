@@ -1,93 +1,67 @@
-console.log("Eric frontend script loaded.");
+// server.js (CommonJS version)
 
-const chatLog = document.getElementById("chat-log");
-const input = document.getElementById("user-input");
-const sendBtn = document.getElementById("send-btn");
+require("dotenv").config();
+const express = require("express");
+const cors = require("cors");
+const OpenAI = require("openai");
 
-console.log("Elements found:", { chatLog, input, sendBtn });
+const app = express();
+const port = process.env.PORT || 3000;
 
-// Adds a message bubble to the chat window
-function addMessage(text, sender) {
-  const wrapper = document.createElement("div");
-  wrapper.className = `message ${sender}`;
+// Middleware
+app.use(cors());
+app.use(express.json());
 
-  const bubble = document.createElement("div");
-  bubble.className = "bubble";
-  bubble.textContent = text;
+// Serve the frontend
+app.use(express.static("public"));
 
-  wrapper.appendChild(bubble);
-  chatLog.appendChild(wrapper);
-  chatLog.scrollTop = chatLog.scrollHeight;
-}
-
-async function sendMessage() {
-  console.log("sendMessage called");
-
-  const text = input.value.trim();
-  if (!text) {
-    console.log("No text entered, not sending.");
-    return;
-  }
-
-  // Show user's message
-  addMessage(text, "user");
-  input.value = "";
-  input.focus();
-
-  // Show temporary "Eric is thinking..."
-  const thinkingMessage = document.createElement("div");
-  thinkingMessage.className = "message eric";
-  const bubble = document.createElement("div");
-  bubble.className = "bubble";
-  bubble.textContent = "Eric is thinking…";
-  thinkingMessage.appendChild(bubble);
-  chatLog.appendChild(thinkingMessage);
-  chatLog.scrollTop = chatLog.scrollHeight;
-
-  sendBtn.disabled = true;
-
-  try {
-    const res = await fetch("/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ message: text }),
-    });
-
-    if (!res.ok) {
-      const errorBody = await res.json().catch(() => ({}));
-      throw new Error(errorBody.error || `Request failed with ${res.status}`);
-    }
-
-    const data = await res.json();
-
-    // Replace the "thinking" bubble with actual response
-    thinkingMessage.remove();
-    addMessage(data.reply || "I couldn't think of a response.", "eric");
-  } catch (err) {
-    console.error(err);
-    thinkingMessage.remove();
-    addMessage(
-      "Sorry, I couldn't reach the backend. If this is hosted on a free service, it might have gone idle—try again in a moment.",
-      "eric"
-    );
-  } finally {
-    sendBtn.disabled = false;
-  }
-}
-
-// Button click
-sendBtn.addEventListener("click", () => {
-  console.log("Send button clicked");
-  sendMessage();
+// OpenAI client
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Enter/Shift+Enter handling
-input.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    console.log("Enter pressed");
-    sendMessage();
+// Chat endpoint
+app.post("/chat", async (req, res) => {
+  try {
+    const { message } = req.body;
+
+    if (!message || typeof message !== "string") {
+      return res.status(400).json({ error: "Message is required." });
+    }
+
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o-mini", // change to another model if you want
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are Eric, an internal chatbot for Alex at GASCU. Be concise, friendly, and clear.",
+        },
+        { role: "user", content: message },
+      ],
+      temperature: 0.6,
+      max_tokens: 500,
+    });
+
+    const reply =
+      completion.choices?.[0]?.message?.content?.trim() ||
+      "Sorry, I couldn't think of a response.";
+
+    res.json({ reply });
+  } catch (err) {
+    console.error("Error in /chat:", err);
+    res.status(500).json({
+      error:
+        "Eric ran into a problem reaching the AI backend. Try again in a moment.",
+    });
   }
+});
+
+// Simple healthcheck (optional)
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", time: new Date().toISOString() });
+});
+
+app.listen(port, () => {
+  console.log(`Eric is listening on http://localhost:${port}`);
 });
