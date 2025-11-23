@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Eric – Internal Chatbot</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="header">
+        <div class="title">Eric</div>
+        <div class="subtitle">Your internal AI assistant</div>
+      </header>
+
+      <main class="chat-container">
+        <div id="chat-log" class="chat-log"></div>
+      </main>
+
+      <footer class="input-container">
+        <textarea
+          id="user-input"
+          placeholder="Ask Eric anything… (Shift+Enter for new line)"
+          rows="2"
+        ></textarea>
+        <button id="send-btn">Send</button>
+      </footer>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
