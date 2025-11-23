@@ -4,7 +4,7 @@ const chatLog = document.getElementById("chat-log");
 const input = document.getElementById("user-input");
 const sendBtn = document.getElementById("send-btn");
 
-console.log("Elements:", { chatLog, input, sendBtn });
+console.log("Elements found:", { chatLog, input, sendBtn });
 
 // Adds a message bubble to the chat window
 function addMessage(text, sender) {
