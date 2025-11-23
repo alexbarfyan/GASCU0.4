@@ -2,32 +2,198 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Eric – Internal Chatbot</title>
+    <title>Eric Minimal Chat</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="style.css" />
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        background: #0f172a;
+        color: #e5e7eb;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+      }
+
+      .app {
+        background: #020617;
+        border-radius: 16px;
+        width: 100%;
+        max-width: 600px;
+        height: 80vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        overflow: hidden;
+      }
+
+      .header {
+        padding: 12px 16px;
+        border-bottom: 1px solid #1f2937;
+        font-weight: 600;
+        font-size: 1.1rem;
+      }
+
+      .chat-log {
+        flex: 1;
+        padding: 12px 16px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .message {
+        max-width: 80%;
+        padding: 8px 12px;
+        border-radius: 12px;
+        font-size: 0.95rem;
+        white-space: pre-wrap;
+      }
+
+      .message.user {
+        margin-left: auto;
+        background: #38bdf8;
+        color: #0f172a;
+        border-bottom-right-radius: 4px;
+      }
+
+      .message.eric {
+        margin-right: auto;
+        background: #111827;
+        border: 1px solid #4b5563;
+        border-bottom-left-radius: 4px;
+      }
+
+      .input-area {
+        border-top: 1px solid #1f2937;
+        padding: 8px;
+        display: flex;
+        gap: 8px;
+        background: #020617;
+      }
+
+      #user-input {
+        flex: 1;
+        resize: none;
+        border-radius: 8px;
+        border: 1px solid #4b5563;
+        background: #020617;
+        color: #e5e7eb;
+        padding: 8px;
+        font-size: 0.95rem;
+      }
+
+      #send-btn {
+        border-radius: 999px;
+        border: none;
+        padding: 0 16px;
+        background: #22c55e;
+        color: #022c22;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      #send-btn:disabled {
+        opacity: 0.6;
+        cursor: default;
+      }
+    </style>
   </head>
   <body>
     <div class="app">
-      <header class="header">
-        <div class="title">Eric</div>
-        <div class="subtitle">Your internal AI assistant</div>
-      </header>
-
-      <main class="chat-container">
-        <div id="chat-log" class="chat-log"></div>
-      </main>
-
-      <footer class="input-container">
+      <div class="header">Eric – Minimal Chat Test</div>
+      <div id="chat-log" class="chat-log"></div>
+      <div class="input-area">
         <textarea
           id="user-input"
-          placeholder="Ask Eric anything… (Shift+Enter for new line)"
           rows="2"
+          placeholder="Type something and hit Send…"
         ></textarea>
         <button id="send-btn">Send</button>
-      </footer>
+      </div>
     </div>
 
-    <!-- script MUST be at the end so elements exist -->
-    <script src="script.js"></script>
+    <script>
+      console.log("Inline script loaded");
+
+      const chatLog = document.getElementById("chat-log");
+      const input = document.getElementById("user-input");
+      const sendBtn = document.getElementById("send-btn");
+
+      console.log("Elements:", { chatLog, input, sendBtn });
+
+      function addMessage(text, sender) {
+        const div = document.createElement("div");
+        div.className = "message " + sender;
+        div.textContent = text;
+        chatLog.appendChild(div);
+        chatLog.scrollTop = chatLog.scrollHeight;
+      }
+
+      async function sendMessage() {
+        const text = input.value.trim();
+        if (!text) {
+          console.log("No text, not sending");
+          return;
+        }
+
+        // show user message
+        addMessage(text, "user");
+        input.value = "";
+        input.focus();
+
+        // show temporary thinking message
+        const thinking = document.createElement("div");
+        thinking.className = "message eric";
+        thinking.textContent = "Eric is thinking…";
+        chatLog.appendChild(thinking);
+        chatLog.scrollTop = chatLog.scrollHeight;
+
+        sendBtn.disabled = true;
+
+        try {
+          const res = await fetch("/chat", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ message: text }),
+          });
+
+          if (!res.ok) {
+            throw new Error("HTTP " + res.status);
+          }
+
+          const data = await res.json();
+          thinking.remove();
+          addMessage(data.reply || "(no reply)", "eric");
+        } catch (err) {
+          console.error(err);
+          thinking.remove();
+          addMessage(
+            "Error talking to server: " + (err.message || err),
+            "eric"
+          );
+        } finally {
+          sendBtn.disabled = false;
+        }
+      }
+
+      sendBtn.addEventListener("click", () => {
+        console.log("Send clicked");
+        sendMessage();
+      });
+
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          console.log("Enter pressed");
+          sendMessage();
+        }
+      });
+    </script>
   </body>
 </html>
