@@ -1,64 +1,93 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-import OpenAI from "openai";
+console.log("Eric frontend script loaded.");
 
-dotenv.config();
+const chatLog = document.getElementById("chat-log");
+const input = document.getElementById("user-input");
+const sendBtn = document.getElementById("send-btn");
 
-const app = express();
-const port = process.env.PORT || 3000;
+console.log("Elements found:", { chatLog, input, sendBtn });
 
-// --- Middleware ---
-app.use(cors());
-app.use(express.json());
-app.use(express.static("public")); // serves index.html, css, js
+// Adds a message bubble to the chat window
+function addMessage(text, sender) {
+  const wrapper = document.createElement("div");
+  wrapper.className = `message ${sender}`;
 
-// --- OpenAI client ---
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+  bubble.textContent = text;
 
-// --- Chat endpoint ---
-app.post("/chat", async (req, res) => {
+  wrapper.appendChild(bubble);
+  chatLog.appendChild(wrapper);
+  chatLog.scrollTop = chatLog.scrollHeight;
+}
+
+async function sendMessage() {
+  console.log("sendMessage called");
+
+  const text = input.value.trim();
+  if (!text) {
+    console.log("No text entered, not sending.");
+    return;
+  }
+
+  // Show user's message
+  addMessage(text, "user");
+  input.value = "";
+  input.focus();
+
+  // Show temporary "Eric is thinking..."
+  const thinkingMessage = document.createElement("div");
+  thinkingMessage.className = "message eric";
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+  bubble.textContent = "Eric is thinking…";
+  thinkingMessage.appendChild(bubble);
+  chatLog.appendChild(thinkingMessage);
+  chatLog.scrollTop = chatLog.scrollHeight;
+
+  sendBtn.disabled = true;
+
   try {
-    const { message } = req.body;
+    const res = await fetch("/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ message: text }),
+    });
 
-    if (!message || typeof message !== "string") {
-      return res.status(400).json({ error: "Message is required." });
+    if (!res.ok) {
+      const errorBody = await res.json().catch(() => ({}));
+      throw new Error(errorBody.error || `Request failed with ${res.status}`);
     }
 
-    // Call OpenAI
-    const completion = await client.chat.completions.create({
-      model: "gpt-4o-mini", // change if you want a different model
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are Eric, an internal chatbot for Alex. You are concise, friendly, and helpful. Use clear, direct answers.",
-        },
-        { role: "user", content: message },
-      ],
-      temperature: 0.6,
-      max_tokens: 500,
-    });
+    const data = await res.json();
 
-    const reply = completion.choices[0]?.message?.content?.trim() || "…";
-
-    res.json({ reply });
+    // Replace the "thinking" bubble with actual response
+    thinkingMessage.remove();
+    addMessage(data.reply || "I couldn't think of a response.", "eric");
   } catch (err) {
-    console.error("Error in /chat:", err);
-    res.status(500).json({
-      error:
-        "Eric ran into a problem reaching the AI backend. If this is hosted on a free tier, it may have gone to sleep—try again in a moment.",
-    });
+    console.error(err);
+    thinkingMessage.remove();
+    addMessage(
+      "Sorry, I couldn't reach the backend. If this is hosted on a free service, it might have gone idle—try again in a moment.",
+      "eric"
+    );
+  } finally {
+    sendBtn.disabled = false;
   }
+}
+
+// Button click
+sendBtn.addEventListener("click", () => {
+  console.log("Send button clicked");
+  sendMessage();
 });
 
-// Healthcheck route (helps avoid “inactive crash” during pings)
-app.get("/health", (req, res) => {
-  res.json({ status: "ok", time: new Date().toISOString() });
-});
-
-app.listen(port, () => {
-  console.log(`Eric is listening on http://localhost:${port}`);
+// Enter/Shift+Enter handling
+input.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    console.log("Enter pressed");
+    sendMessage();
+  }
 });
