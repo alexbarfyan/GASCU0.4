@@ -1,6 +1,10 @@
+console.log("Eric frontend script loaded.");
+
 const chatLog = document.getElementById("chat-log");
 const input = document.getElementById("user-input");
 const sendBtn = document.getElementById("send-btn");
+
+console.log("Elements:", { chatLog, input, sendBtn });
 
 // Adds a message bubble to the chat window
 function addMessage(text, sender) {
@@ -17,8 +21,13 @@ function addMessage(text, sender) {
 }
 
 async function sendMessage() {
+  console.log("sendMessage called");
+
   const text = input.value.trim();
-  if (!text) return;
+  if (!text) {
+    console.log("No text entered, not sending.");
+    return;
+  }
 
   // Show user's message
   addMessage(text, "user");
@@ -69,12 +78,16 @@ async function sendMessage() {
 }
 
 // Button click
-sendBtn.addEventListener("click", sendMessage);
+sendBtn.addEventListener("click", () => {
+  console.log("Send button clicked");
+  sendMessage();
+});
 
 // Enter/Shift+Enter handling
 input.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
+    console.log("Enter pressed");
     sendMessage();
   }
 });
