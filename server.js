@@ -1,67 +1,32 @@
-// server.js (CommonJS version)
+// server.js - minimal echo server for Eric
 
-require("dotenv").config();
+const path = require("path");
 const express = require("express");
-const cors = require("cors");
-const OpenAI = require("openai");
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = 3000;
 
-// Middleware
-app.use(cors());
+// Parse JSON request bodies
 app.use(express.json());
 
-// Serve the frontend
-app.use(express.static("public"));
+// Serve static files from /public
+app.use(express.static(path.join(__dirname, "public")));
 
-// OpenAI client
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Minimal /chat endpoint that just echoes your message
+app.post("/chat", (req, res) => {
+  const { message } = req.body;
 
-// Chat endpoint
-app.post("/chat", async (req, res) => {
-  try {
-    const { message } = req.body;
-
-    if (!message || typeof message !== "string") {
-      return res.status(400).json({ error: "Message is required." });
-    }
-
-    const completion = await client.chat.completions.create({
-      model: "gpt-4o-mini", // change to another model if you want
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are Eric, an internal chatbot for Alex at GASCU. Be concise, friendly, and clear.",
-        },
-        { role: "user", content: message },
-      ],
-      temperature: 0.6,
-      max_tokens: 500,
-    });
-
-    const reply =
-      completion.choices?.[0]?.message?.content?.trim() ||
-      "Sorry, I couldn't think of a response.";
-
-    res.json({ reply });
-  } catch (err) {
-    console.error("Error in /chat:", err);
-    res.status(500).json({
-      error:
-        "Eric ran into a problem reaching the AI backend. Try again in a moment.",
-    });
+  if (!message || typeof message !== "string") {
+    return res.status(400).json({ error: "Message is required." });
   }
+
+  console.log("Received from browser:", message);
+
+  // For now, just echo back. We'll plug OpenAI in later.
+  res.json({ reply: "Eric (test): I heard you say → " + message });
 });
 
-// Simple healthcheck (optional)
-app.get("/health", (req, res) => {
-  res.json({ status: "ok", time: new Date().toISOString() });
-});
-
+// Start server
 app.listen(port, () => {
-  console.log(`Eric is listening on http://localhost:${port}`);
+  console.log(`Eric test server running at http://localhost:${port}`);
 });
