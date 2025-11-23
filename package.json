@@ -1,9 +1,7 @@
 {
-  "name": "eric-chatbot",
+  "name": "gascu-chat",
   "version": "1.0.0",
-  "description": "Internal chatbot Eric",
   "main": "server.js",
-  "type": "module",
   "scripts": {
     "start": "node server.js"
   },
